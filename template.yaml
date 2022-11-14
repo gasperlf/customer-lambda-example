@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  customer-api
+
+  Sample SAM Template for customer-api
+
+
+Globals:
+  Function:
+    Timeout: 50
+    MemorySize: 512
+    Runtime: java11
+    Tracing: Active
+    Environment:
+      Variables:
+        CUSTOMERS_TABLE: !Ref CustomersTable
+  Api:
+    TracingEnabled: False
+
+Resources:
+  CustomersTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+  CreateCustomerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: customer-api
+      Handler: net.ontopsolutions.customer.lambdas.CreateCustomerLambda::createCustomer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CustomersTable
+      Events:
+        CustomerEvents:
+          Type: Api
+          Properties:
+            Path: /customers
+            Method: POST
+  GetCustomersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: customer-api
+      Handler: net.ontopsolutions.customer.lambdas.GetCustomersLambda::getCustomers
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CustomersTable
+      Events:
+        CustomerEvents:
+          Type: Api
+          Properties:
+            Path: /customers
+            Method: GET
+
+Outputs:
+  CreateCustomersAPI:
+    Description: "API Gateway endpoint to create customers function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazon.com/Prod/customers"
+  CreateCustomerFunction:
+    Description: "Create customer Lambda Function ARN"
+    Value: !GetAtt CreateCustomerFunction.Arn
+  CreateCustomerFunctionIamRole:
+    Description: "Create customer Lambda Function Im role ARN"
+    Value: !GetAtt CreateCustomerFunctionRole.Arn
